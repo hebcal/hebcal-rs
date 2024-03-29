@@ -3,6 +3,16 @@ use chrono::{Datelike, NaiveDate};
 const LENGTHS: [u32; 13] = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 const LEAP_LENGTHS: [u32; 13] = [0, 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
+#[inline]
+fn quotient(x: i32, y: i32) -> i32 {
+    (x as f32 / y as f32).floor() as i32
+}
+
+#[inline]
+fn reminder(x: i32, y: i32) -> i32 {
+    x - y * (x as f32 / y as f32).floor() as i32
+}
+
 /// # Parameters
 ///
 /// * `year`: The Gregorian year.
@@ -61,7 +71,7 @@ pub fn absolute_to_gregorian(absolute: i32) -> Option<NaiveDate> {
             2
         }
     };
-    let month: u32 = quotient((12 * (prior_days + correction) + 373) as f32, 367_f32)
+    let month: u32 = quotient(12 * (prior_days + correction) + 373, 367)
         .try_into()
         .unwrap();
     let day: u32 = (absolute - to_fixed(year, month, 1) + 1)
@@ -72,24 +82,19 @@ pub fn absolute_to_gregorian(absolute: i32) -> Option<NaiveDate> {
 
 fn year_from_fixed(abs: i32) -> i32 {
     let l0 = abs - 1;
-    let n400 = l0 / 146097;
-    let d1 = l0 % 146097;
-    let n100 = d1 / 36524;
-    let d2 = d1 % 36524;
-    let n4 = d2 / 1461;
-    let d3 = d2 % 1461;
-    let n1 = d3 / 365;
+    let n400 = quotient(l0, 146097);
+    let d1 = reminder(l0, 146097);
+    let n100 = quotient(d1, 36524);
+    let d2 = reminder(d1, 36524);
+    let n4 = quotient(d2, 1461);
+    let d3 = reminder(d2, 1461);
+    let n1 = quotient(d3, 365);
     let year = 400 * n400 + 100 * n100 + 4 * n4 + n1;
     if n100 != 4 && n1 != 4 {
         year + 1
     } else {
         year
     }
-}
-
-#[inline]
-fn quotient(x: f32, y: f32) -> i32 {
-    (x / y).floor() as i32
 }
 
 // Panics if the given Gregorian date is not valid.
@@ -100,10 +105,9 @@ fn to_fixed(year: i32, month: u32, day: u32) -> i32 {
     let day = day as i32;
     let previous_year = year - 1;
 
-    365 * previous_year + quotient(previous_year as f32, 4_f32)
-        - quotient(previous_year as f32, 100_f32)
-        + quotient(previous_year as f32, 400_f32)
-        + quotient((367 * month - 362) as f32, 12_f32)
+    365 * previous_year + quotient(previous_year, 4) - quotient(previous_year, 100)
+        + quotient(previous_year, 400)
+        + quotient(367 * month - 362, 12)
         + if month <= 2 {
             0
         } else {
@@ -223,8 +227,32 @@ mod test {
             );
             assert_eq!(
                 absolute_to_gregorian(0).unwrap(),
+                NaiveDate::from_ymd_opt(0, 12, 31).unwrap()
+            );
+            assert_eq!(
+                absolute_to_gregorian(-1).unwrap(),
                 NaiveDate::from_ymd_opt(0, 12, 30).unwrap()
             );
+        }
+
+        #[test]
+        fn test_days_in_month() {
+            assert_eq!(days_in_month(2, 2020), 29);
+            assert_eq!(days_in_month(2, 2019), 28);
+            assert_eq!(days_in_month(5, 2020), 31);
+            assert_eq!(days_in_month(2, 2100), 28);
+        }
+
+        #[test]
+        fn test_is_leap_year() {
+            assert!(is_leap_year(2020));
+            assert!(!is_leap_year(2019));
+            assert!(!is_leap_year(2018));
+            assert!(!is_leap_year(2017));
+            assert!(is_leap_year(2016));
+            assert!(is_leap_year(2000));
+            assert!(!is_leap_year(2100));
+            assert!(is_leap_year(1980));
         }
     }
 }
