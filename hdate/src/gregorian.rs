@@ -61,7 +61,7 @@ pub fn absolute_to_gregorian(absolute: i32) -> Option<NaiveDate> {
             2
         }
     };
-    let month: u32 = ((12 * (prior_days + correction) + 373) / 367)
+    let month: u32 = quotient((12 * (prior_days + correction) + 373) as f32, 367_f32)
         .try_into()
         .unwrap();
     let day: u32 = (absolute - to_fixed(year, month, 1) + 1)
@@ -87,6 +87,11 @@ fn year_from_fixed(abs: i32) -> i32 {
     }
 }
 
+#[inline]
+fn quotient(x: f32, y: f32) -> i32 {
+    (x / y).floor() as i32
+}
+
 // Panics if the given Gregorian date is not valid.
 fn to_fixed(year: i32, month: u32, day: u32) -> i32 {
     assert!(month >= 1 && month <= 12);
@@ -95,9 +100,10 @@ fn to_fixed(year: i32, month: u32, day: u32) -> i32 {
     let day = day as i32;
     let previous_year = year - 1;
 
-    365 * previous_year + (previous_year / 4) - (previous_year / 100)
-        + (previous_year / 400)
-        + ((367 * month - 362) / 12)
+    365 * previous_year + quotient(previous_year as f32, 4_f32)
+        - quotient(previous_year as f32, 100_f32)
+        + quotient(previous_year as f32, 400_f32)
+        + quotient((367 * month - 362) as f32, 12_f32)
         + if month <= 2 {
             0
         } else {
