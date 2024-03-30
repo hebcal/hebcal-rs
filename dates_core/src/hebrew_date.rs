@@ -178,7 +178,7 @@ impl HebrewMonth {
     /// let month = HebrewMonth::try_from_ym(HebrewMonth::AdarI as u8, 5763).unwrap();
     /// assert_eq!(month, HebrewMonth::AdarI);
     pub fn try_from_ym(month: u8, year: u32) -> Result<HebrewMonth, HebrewDateErrors> {
-        if month < 1 || month > 14 {
+        if !(1..=14).contains(&month) {
             return Err(HebrewDateErrors::BadMonthArgument);
         }
 
@@ -188,14 +188,12 @@ impl HebrewMonth {
             } else {
                 Ok(HebrewMonth::from(month))
             }
+        } else if month == 14 {
+            Err(HebrewDateErrors::BadMonthArgument)
+        } else if month == 13 {
+            Ok(HebrewMonth::Nisan)
         } else {
-            if month == 14 {
-                Err(HebrewDateErrors::BadMonthArgument)
-            } else if month == 13 {
-                Ok(HebrewMonth::Nisan)
-            } else {
-                Ok(HebrewMonth::from(month))
-            }
+            Ok(HebrewMonth::from(month))
         }
     }
 }
@@ -295,7 +293,7 @@ static ELAPSED_DAYS_CACHE: Lazy<RwLock<HashMap<u32, u32>>> =
 /// The number of days from the Sunday prior to the start of the Hebrew calendar to the mean conjunction of Tishrei in the given Hebrew year
 pub fn elapsed_days(year: u32) -> u32 {
     if let Some(days) = ELAPSED_DAYS_CACHE.read().unwrap().get(&year) {
-        return days.clone();
+        return *days;
     }
     let previous_year = year as f32 - 1.0;
 
