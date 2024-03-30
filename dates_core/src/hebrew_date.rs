@@ -12,10 +12,27 @@ pub enum HebrewDateErrors {
     BadMonthArgument,
 }
 
+/// A Hebrew date, consisting of a year, month, and day.
+///
+/// # Examples
+///
+/// ```
+/// use hdate::hebrew_date::HebrewDate;
+/// use hdate::hebrew_date::HebrewMonth;
+///
+/// let date = HebrewDate {
+///     year: 5769,
+///     month: HebrewMonth::Cheshvan,
+///     day: 15,
+/// };
+/// ```
 #[derive(PartialEq, Debug)]
 pub struct HebrewDate {
+    /// The Hebrew year.
     pub year: u32,
+    /// The Hebrew month.
     pub month: HebrewMonth,
+    /// The Hebrew day.
     pub day: u8,
 }
 
@@ -28,10 +45,44 @@ impl HebrewDate {
         Self::new(year, HebrewMonth::from(month), day)
     }
 
+    /// Converts the HebrewDate into an absolute value.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hdate::hebrew_date::HebrewDate;
+    /// use hdate::hebrew_date::HebrewMonth;
+    ///
+    /// let date = HebrewDate::new(5769, HebrewMonth::Cheshvan, 15);
+    /// let absolute = date.into_absolute();
+    /// assert_eq!(absolute, 733359);
+    /// ```
     pub fn into_absolute(self) -> i32 {
         hebrew_to_absolute(self.year, self.month, self.day)
     }
 
+    /// A function to create a Hebrew date from an Rata Die (R.D. number) value.
+    ///
+    /// # Arguments
+    ///
+    /// * `absolute` - The Rata Die value to convert.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing a `HebrewDate` or an `HebrewDateError`.
+    ///
+    /// # Errors
+    ///
+    /// If the absolute value is before the creation of time, an `HebrewDateError::BeforeEpochError` is returned.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hdate::hebrew_date::HebrewDate;
+    /// use hdate::hebrew_date::HebrewMonth;
+    ///
+    /// let date = HebrewDate::try_from_absolute(733359).unwrap();
+    /// assert_eq!(date, HebrewDate::new(5769, HebrewMonth::Cheshvan, 15));
     pub fn try_from_absolute(absolute: i32) -> Result<Self, HebrewDateErrors> {
         if absolute < EPOCH {
             return Err(HebrewDateErrors::BeforeEpochError(format!(
@@ -104,6 +155,28 @@ impl From<u8> for HebrewMonth {
 }
 
 impl HebrewMonth {
+    // A function to get the right Hebrew month from a month number and a year.
+    ///
+    /// # Arguments
+    ///
+    /// * `month` - The month number, where 1 represents Nisan and 13 represents Adar II in leap year or Nisan in regular year.
+    /// * `year` - The Hebrew year.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing a `HebrewMonth` or an `HebrewDateError`.
+    ///
+    /// # Errors
+    ///
+    /// If the month number is out of range (1-13) an `HebrewDateError::BadMonthArgument` is returned.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hdate::hebrew_date::HebrewMonth;
+    ///
+    /// let month = HebrewMonth::try_from_ym(HebrewMonth::AdarI as u8, 5763).unwrap();
+    /// assert_eq!(month, HebrewMonth::AdarI);
     pub fn try_from_ym(month: u8, year: u32) -> Result<HebrewMonth, HebrewDateErrors> {
         if month < 1 || month > 14 {
             return Err(HebrewDateErrors::BadMonthArgument);
@@ -127,6 +200,15 @@ impl HebrewMonth {
     }
 }
 
+/// Returns whether the given Hebrew year is a leap year.
+///
+/// # Examples
+///
+/// ```
+/// use hdate::hebrew_date::is_leap_year;
+///
+/// assert!(is_leap_year(5779));
+/// assert!(!is_leap_year(5780));
 pub fn is_leap_year(year: u32) -> bool {
     (1 + year * 7) % 19 < 7
 }
@@ -204,8 +286,13 @@ fn days_in_year(year: u32) -> u32 {
 
 static ELAPSED_DAYS_CACHE: Lazy<RwLock<HashMap<u32, u32>>> =
     Lazy::new(|| RwLock::new(HashMap::new()));
-/// Days from sunday prior to start of Hebrew calendar to mean
-/// conjunction of Tishrei in Hebrew YEAR
+/// # Arguments
+///
+/// * `year` - The Hebrew year for which to calculate the number of days
+///
+/// # Returns
+///
+/// The number of days from the Sunday prior to the start of the Hebrew calendar to the mean conjunction of Tishrei in the given Hebrew year
 pub fn elapsed_days(year: u32) -> u32 {
     if let Some(days) = ELAPSED_DAYS_CACHE.read().unwrap().get(&year) {
         return days.clone();
