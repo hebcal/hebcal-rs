@@ -337,7 +337,7 @@ fn new_year(year: u32) -> i32 {
 
 #[cfg(test)]
 mod tests {
-    use crate::hebrew_date::*;
+    use crate::hebrew::*;
 
     #[test]
     fn test_elapsed_days() {
