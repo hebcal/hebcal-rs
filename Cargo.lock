@@ -66,6 +66,7 @@ name = "hdate"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "once_cell",
 ]
 
 [[package]]
