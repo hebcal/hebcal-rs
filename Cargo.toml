@@ -1,3 +1,12 @@
 [workspace]
 resolver = "2"
 members = ["dates_core"]
+
+[workspace.package]
+authors = ["Assaf Sapir"]
+license = "GPL-2.0"
+repository = "https://github.com/hebcal/hebcal-rs"
+version = "0.1.0"
+
+[workspace.dependencies]
+chrono = "0.4.37"
