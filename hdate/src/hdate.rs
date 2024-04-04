@@ -79,7 +79,7 @@ impl Hdate {
     /// use hdate::{Hdate, HebrewMonth};
     ///
     /// let hdate = Hdate::from_ymd(5782, HebrewMonth::Tishrei, 1);
-    /// assert_eq!(hdate.get_week_day(), 3);
+    /// assert_eq!(hdate.get_week_day(), 2);
     /// ```
     pub fn get_week_day(&self) -> u8 {
         (self.rd as f32 % 7.0).floor() as u8
