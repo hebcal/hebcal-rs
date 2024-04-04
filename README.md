@@ -29,7 +29,7 @@ Contributions are welcome! If you have a suggestion for an improvement, please o
 
 This project is licensed under the terms of the [GNU General Public License v2.0](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html).
 
-Copyright (C) 2023 Assaf Sapir
+Copyright (C) 2024 Assaf Sapir
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
