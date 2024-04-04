@@ -9,6 +9,7 @@ const AVG_HEBREW_YEAR_DAYS: f64 = 365.24682220597794;
 #[derive(Debug, PartialEq)]
 pub enum HebrewDateErrors {
     BeforeEpochError(String),
+    AdarIIInNotLeapYear,
     BadMonthArgument,
 }
 
@@ -116,21 +117,21 @@ impl HebrewDate {
     }
 }
 
-#[derive(PartialEq, PartialOrd, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Debug, Copy, Clone)]
 pub enum HebrewMonth {
     Nisan = 1,
-    Iyyar = 2,
-    Sivan = 3,
-    Tamuz = 4,
-    Av = 5,
-    Elul = 6,
-    Tishrei = 7,
-    Cheshvan = 8,
-    Kislev = 9,
-    Tevet = 10,
-    Shvat = 11,
-    AdarI = 12,
-    AdarII = 13,
+    Iyyar,
+    Sivan,
+    Tamuz,
+    Av,
+    Elul,
+    Tishrei,
+    Cheshvan,
+    Kislev,
+    Tevet,
+    Shvat,
+    AdarI,
+    AdarII,
 }
 
 impl From<u8> for HebrewMonth {
@@ -230,7 +231,7 @@ fn hebrew_to_absolute(year: u32, month: HebrewMonth, day: u8) -> i32 {
     EPOCH + elapsed_days(year) as i32 + temp_absolute as i32 - 1
 }
 
-fn months_in_year(year: u32) -> u8 {
+pub fn months_in_year(year: u32) -> u8 {
     if is_leap_year(year) {
         13
     } else {
@@ -246,7 +247,7 @@ fn is_short_kislev(year: u32) -> bool {
     days_in_year(year) % 10 == 3
 }
 
-fn days_in_month(month: HebrewMonth, year: u32) -> u8 {
+pub fn days_in_month(month: HebrewMonth, year: u32) -> u8 {
     match month {
         HebrewMonth::Iyyar
         | HebrewMonth::Tamuz
