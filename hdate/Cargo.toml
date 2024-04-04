@@ -12,4 +12,4 @@ version = { workspace = true }
 
 [dependencies]
 chrono = { workspace = true }
-hdate_core = { path = "../hdate_core", version = "0.1.0" }
+hdate_core = { path = "../hdate_core", version = "0.1.1" }
