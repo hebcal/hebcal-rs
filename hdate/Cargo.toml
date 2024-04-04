@@ -1,5 +1,6 @@
 [package]
 name = "hdate"
+description = "A perpetual Jewish Calendar"
 authors = { workspace = true }
 edition = { workspace = true }
 keywords = { workspace = true }
