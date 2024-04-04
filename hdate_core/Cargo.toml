@@ -1,12 +1,13 @@
 [package]
-name = "dates_core"
+name = "hdate_core"
+description = "Core functionallity for the HDate crate"
 authors = { workspace = true }
 edition = { workspace = true }
 keywords = { workspace = true }
 license = { workspace = true }
 readme = { workspace = true }
 repository = { workspace = true }
-version = { workspace = true }
+version = "0.1.0"
 
 
 [dependencies]

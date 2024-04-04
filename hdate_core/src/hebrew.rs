@@ -18,8 +18,8 @@ pub enum HebrewDateErrors {
 /// # Examples
 ///
 /// ```
-/// use dates_core::hebrew::HebrewDate;
-/// use dates_core::hebrew::HebrewMonth;
+/// use hdate_core::hebrew::HebrewDate;
+/// use hdate_core::hebrew::HebrewMonth;
 ///
 /// let date = HebrewDate {
 ///     year: 5769,
@@ -51,8 +51,8 @@ impl HebrewDate {
     /// # Examples
     ///
     /// ```
-    /// use dates_core::hebrew::HebrewDate;
-    /// use dates_core::hebrew::HebrewMonth;
+    /// use hdate_core::hebrew::HebrewDate;
+    /// use hdate_core::hebrew::HebrewMonth;
     ///
     /// let date = HebrewDate::new(5769, HebrewMonth::Cheshvan, 15);
     /// let absolute = date.into_absolute();
@@ -79,8 +79,8 @@ impl HebrewDate {
     /// # Examples
     ///
     /// ```
-    /// use dates_core::hebrew::HebrewDate;
-    /// use dates_core::hebrew::HebrewMonth;
+    /// use hdate_core::hebrew::HebrewDate;
+    /// use hdate_core::hebrew::HebrewMonth;
     ///
     /// let date = HebrewDate::try_from_absolute(733359).unwrap();
     /// assert_eq!(date, HebrewDate::new(5769, HebrewMonth::Cheshvan, 15));
@@ -174,7 +174,7 @@ impl HebrewMonth {
     /// # Examples
     ///
     /// ```
-    /// use dates_core::hebrew::HebrewMonth;
+    /// use hdate_core::hebrew::HebrewMonth;
     ///
     /// let month = HebrewMonth::try_from_ym(HebrewMonth::AdarI as u8, 5763).unwrap();
     /// assert_eq!(month, HebrewMonth::AdarI);
@@ -204,7 +204,7 @@ impl HebrewMonth {
 /// # Examples
 ///
 /// ```
-/// use dates_core::hebrew::is_leap_year;
+/// use hdate_core::hebrew::is_leap_year;
 ///
 /// assert!(is_leap_year(5779));
 /// assert!(!is_leap_year(5780));

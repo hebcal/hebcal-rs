@@ -1,16 +1,16 @@
 [workspace]
 resolver = "2"
-members = ["dates_core", "hdate"]
+members = ["hdate_core", "hdate"]
 
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
-description = "A perpetual Jewish Calendar API"
-authors = ["Assaf Sapir"]
+description = "A perpetual Jewish Calendar"
+authors = ["Assaf Sapir <assaf@sapir.io>"]
 license = "GPL-2.0"
 repository = "https://github.com/hebcal/hebcal-rs"
 readme = "README.md"
-keywords = ["hebcal", "hebrew", "calendar", "jewish", "holidays", "date"]
+keywords = ["hebrew", "calendar", "jewish", "holidays", "date"]
 
 [workspace.dependencies]
 chrono = "0.4.37"
