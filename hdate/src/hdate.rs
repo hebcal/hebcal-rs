@@ -1,4 +1,5 @@
 use std::cmp::Ordering;
+use std::ops::{Add, Sub};
 
 use chrono::{Local, NaiveDate};
 use hdate_core::gregorian::gregorian_to_absolute;
@@ -84,6 +85,22 @@ impl Hdate {
     pub fn get_week_day(&self) -> u8 {
         (self.rd as f32 % 7.0).floor() as u8
     }
+
+    /// Returns the difference in days between the two given HDates.
+    /// The result is positive if `self` date is comes chronologically
+    /// after the `other` date, and negative
+    /// if the order of the two dates is reversed.
+    ///
+    /// # Examples
+    ///
+    /// let hdate1 = Hdate::from_ymd(5782, HebrewMonth::Tishrei, 1);
+    /// let hdate2 = Hdate::from_ymd(5782, HebrewMonth::Tishrei, 2);
+    /// let days = hdate1.delta_days(hdate2);
+    /// assert_eq!(days, 1);
+    /// ```
+    pub fn delta_days(&self, other: Self) -> i32 {
+        self.rd - other.rd
+    }
 }
 
 // Traits implementations
@@ -91,6 +108,55 @@ impl Hdate {
 impl Default for Hdate {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl Add<i32> for Hdate {
+    type Output = Self;
+    /// Adds an integer number of days to an Hdate and returns the result.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hdate::{Hdate, HebrewMonth};
+    ///
+    /// let hdate = Hdate::from_ymd(5782, HebrewMonth::Tishrei, 1);
+    /// let result = hdate + 40;
+    /// assert_eq!(result.year, 5782);
+    /// assert_eq!(result.month, HebrewMonth::Cheshvan);
+    /// assert_eq!(result.day, 11);
+    /// ```
+    fn add(self, rhs: i32) -> Self::Output {
+        let rd = self.rd + rhs;
+
+        let naive_hdate = HebrewDate::try_from_absolute(rd).unwrap();
+        Hdate {
+            year: naive_hdate.year,
+            month: naive_hdate.month,
+            day: naive_hdate.day,
+            rd,
+        }
+    }
+}
+
+impl Sub<i32> for Hdate {
+    type Output = Self;
+
+    /// Subtracts an integer number of days from an Hdate and returns the result.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hdate::{Hdate, HebrewMonth};
+    ///
+    /// let hdate = Hdate::from_ymd(5782, HebrewMonth::Tishrei, 1);
+    /// let result = hdate - 40;
+    /// assert_eq!(result.year, 5781);
+    /// assert_eq!(result.month, HebrewMonth::Av);
+    /// assert_eq!(result.day, 20);
+    /// ```
+    fn sub(self, rhs: i32) -> Self::Output {
+        self + -rhs
     }
 }
 
@@ -158,5 +224,14 @@ mod tests {
         assert_eq!(hdate.get_week_day(), 6);
         let hdate = Hdate::from_ymd(5784, HebrewMonth::AdarII, 28);
         assert_eq!(hdate.get_week_day(), 0);
+    }
+
+    #[test]
+    fn test_delta_days() {
+        let hdate1 = Hdate::from_ymd(5770, HebrewMonth::Kislev, 25);
+        let hdate2 = Hdate::from_ymd(5769, HebrewMonth::Cheshvan, 15);
+        assert_eq!(hdate1.delta_days(hdate2), 394);
+        assert_eq!(hdate2.delta_days(hdate1), -394);
+        assert_eq!(hdate1.delta_days(hdate1), 0);
     }
 }
