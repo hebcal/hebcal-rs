@@ -1,5 +1,5 @@
 [package]
-name = "dates_core"
+name = "hdate_core"
 authors = { workspace = true }
 edition = { workspace = true }
 keywords = { workspace = true }

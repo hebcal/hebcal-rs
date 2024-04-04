@@ -1,8 +1,8 @@
 use std::cmp::Ordering;
 
 use chrono::{Local, NaiveDate};
-use dates_core::gregorian::gregorian_to_absolute;
-use dates_core::hebrew::{self, HebrewDate, HebrewDateErrors};
+use hdate_core::gregorian::gregorian_to_absolute;
+use hdate_core::hebrew::{self, HebrewDate, HebrewDateErrors};
 
 use crate::HebrewMonth;
 

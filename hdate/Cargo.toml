@@ -11,4 +11,4 @@ version = { workspace = true }
 
 [dependencies]
 chrono = { workspace = true }
-dates_core = { path = "../dates_core" }
+hdate_core = { path = "../hdate_core" }

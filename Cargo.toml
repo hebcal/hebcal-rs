@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["dates_core", "hdate"]
+members = ["hdate_core", "hdate"]
 
 [workspace.package]
 version = "0.1.0"
