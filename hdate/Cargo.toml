@@ -1,5 +1,5 @@
 [package]
-name = "dates_core"
+name = "hdate"
 authors = { workspace = true }
 edition = { workspace = true }
 keywords = { workspace = true }
@@ -11,4 +11,4 @@ version = { workspace = true }
 
 [dependencies]
 chrono = { workspace = true }
-once_cell = "1.19.0"
+dates_core = { path = "../dates_core" }
