@@ -1,5 +1,6 @@
 [package]
 name = "hdate_core"
+description = "Core functionallity for the HDate crate"
 authors = { workspace = true }
 edition = { workspace = true }
 keywords = { workspace = true }
