@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::RwLock};
+use std::{collections::HashMap, fmt::Display, sync::RwLock};
 
 use once_cell::sync::Lazy;
 
@@ -151,6 +151,26 @@ impl From<u8> for HebrewMonth {
             12 => HebrewMonth::AdarI,
             13 => HebrewMonth::AdarII,
             _ => panic!("Unknown HebrewMonth value"),
+        }
+    }
+}
+
+impl Display for HebrewMonth {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            HebrewMonth::Nisan => write!(f, "Nisan"),
+            HebrewMonth::Iyyar => write!(f, "Iyyar"),
+            HebrewMonth::Sivan => write!(f, "Sivan"),
+            HebrewMonth::Tamuz => write!(f, "Tamuz"),
+            HebrewMonth::Av => write!(f, "Av"),
+            HebrewMonth::Elul => write!(f, "Elul"),
+            HebrewMonth::Tishrei => write!(f, "Tishrei"),
+            HebrewMonth::Cheshvan => write!(f, "Cheshvan"),
+            HebrewMonth::Kislev => write!(f, "Kislev"),
+            HebrewMonth::Tevet => write!(f, "Tevet"),
+            HebrewMonth::Shvat => write!(f, "Shvat"),
+            HebrewMonth::AdarI => write!(f, "AdarI"),
+            HebrewMonth::AdarII => write!(f, "AdarII"),
         }
     }
 }

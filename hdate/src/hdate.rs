@@ -1,4 +1,5 @@
 use std::cmp::Ordering;
+use std::fmt::Display;
 use std::ops::{Add, Sub};
 
 use chrono::{Local, NaiveDate};
@@ -189,6 +190,18 @@ impl TryFrom<NaiveDate> for Hdate {
     }
 }
 
+impl From<Hdate> for NaiveDate {
+    fn from(value: Hdate) -> Self {
+        hdate_core::gregorian::absolute_to_gregorian(value.rd).unwrap()
+    }
+}
+
+impl Display for Hdate {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} {} {}", self.day, self.month, self.year)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -233,5 +246,12 @@ mod tests {
         assert_eq!(hdate1.delta_days(hdate2), 394);
         assert_eq!(hdate2.delta_days(hdate1), -394);
         assert_eq!(hdate1.delta_days(hdate1), 0);
+    }
+
+    #[test]
+    fn test_into_naive_date() {
+        let hdate = Hdate::from_ymd(5784, HebrewMonth::AdarII, 26);
+        let gregorian_date = NaiveDate::from_ymd_opt(2024, 4, 5).unwrap();
+        assert_eq!(Into::<NaiveDate>::into(hdate), gregorian_date);
     }
 }
