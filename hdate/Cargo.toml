@@ -11,5 +11,6 @@ version = { workspace = true }
 
 
 [dependencies]
+bitflags = "2.5.0"
 chrono = { workspace = true }
 hdate_core = { path = "../hdate_core", version = "0.1.0" }
