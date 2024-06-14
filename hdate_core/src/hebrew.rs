@@ -1,10 +1,14 @@
 use std::{collections::HashMap, fmt::Display, sync::RwLock};
 
-use once_cell::sync::Lazy;
+use lazy_static::lazy_static;
 
 const EPOCH: i32 = -1373428;
 
 const AVG_HEBREW_YEAR_DAYS: f64 = 365.24682220597794;
+
+lazy_static! {
+    static ref ELAPSED_DAYS_CACHE: RwLock<HashMap<u32, u32>> = RwLock::new(HashMap::new());
+}
 
 #[derive(Debug, PartialEq)]
 pub enum HebrewDateErrors {
@@ -299,8 +303,6 @@ fn days_in_year(year: u32) -> u32 {
     elapsed_days(year + 1) - elapsed_days(year)
 }
 
-static ELAPSED_DAYS_CACHE: Lazy<RwLock<HashMap<u32, u32>>> =
-    Lazy::new(|| RwLock::new(HashMap::new()));
 /// # Arguments
 ///
 /// * `year` - The Hebrew year for which to calculate the number of days
