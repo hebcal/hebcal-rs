@@ -199,22 +199,16 @@ impl HebrewMonth {
     /// let month = HebrewMonth::try_from_ym(HebrewMonth::AdarI as u8, 5763).unwrap();
     /// assert_eq!(month, HebrewMonth::AdarI);
     pub fn try_from_ym(month: u8, year: u32) -> Result<HebrewMonth, HebrewDateErrors> {
+        // ??? Why not use assert, should be consistent
         if !(1..=14).contains(&month) {
             return Err(HebrewDateErrors::BadMonthArgument);
         }
-
-        if is_leap_year(year) {
-            if month == 14 {
-                Ok(HebrewMonth::Nisan)
-            } else {
-                Ok(HebrewMonth::from(month))
-            }
-        } else if month == 14 {
-            Err(HebrewDateErrors::BadMonthArgument)
-        } else if month == 13 {
-            Ok(HebrewMonth::Nisan)
-        } else {
-            Ok(HebrewMonth::from(month))
+        
+        match (month, is_leap_year(year)) {
+            (14, true) => Ok(HebrewMonth::Nisan),
+            (14, false) => Err(HebrewDateErrors::BadMonthArgument),
+            (13, false) => Ok(HebrewMonth::Nisan),
+            _ => Ok(HebrewMonth::from(month)),
         }
     }
 }
@@ -233,9 +227,10 @@ pub fn is_leap_year(year: u32) -> bool {
 }
 
 fn hebrew_to_absolute(year: u32, month: HebrewMonth, day: u8) -> i32 {
-    assert!(year >= 1);
+    assert!(year > 0, "Year cannot be 0");
 
     let mut temp_absolute = day as u32;
+    
     if month < HebrewMonth::Tishrei {
         for i in HebrewMonth::Tishrei as u8..=months_in_year(year) {
             temp_absolute += days_in_month(i.into(), year) as u32;
@@ -248,6 +243,7 @@ fn hebrew_to_absolute(year: u32, month: HebrewMonth, day: u8) -> i32 {
             temp_absolute += days_in_month(i.into(), year) as u32;
         }
     };
+
     EPOCH + elapsed_days(year) as i32 + temp_absolute as i32 - 1
 }
 
@@ -316,40 +312,43 @@ pub fn elapsed_days(year: u32) -> u32 {
     if let Some(days) = ELAPSED_DAYS_CACHE.read().unwrap().get(&year) {
         return *days;
     }
-    let previous_year = year as f32 - 1.0;
+    
+    let previous_year = year - 1;
 
-    let overall_months = 235.0 * (previous_year / 19.0).floor();
-    let regular_months = 12.0 * (previous_year % 19.0);
-    let leap_months = (((previous_year % 19.0) * 7.0 + 1.0) / 19.0).floor();
-
+    // Calculating months 
+    let overall_months = 235 * (previous_year / 19);
+    let regular_months = 12 * (previous_year % 19);
+    let leap_months = ((previous_year % 19) * 7 + 1) / 19;
     let elapsed_months = overall_months
     // Regular months in this cycle
      + regular_months
      + leap_months;
 
-    let elapsed_parts = 204.0 + 793.0 * (elapsed_months % 1080.0);
-    let elapsed_hours = 5.0
-        + 12.0 * elapsed_months
-        + 793.0 * (elapsed_months / 1080.0).floor()
-        + (elapsed_parts / 1080.0).floor();
+    let elapsed_parts = 204 + 793 * (elapsed_months % 1080);
 
-    let parts = (elapsed_parts % 1080.0) + 1080.0 * (elapsed_hours % 24.0);
-    let day = 1.0 + 29.0 * elapsed_months + (elapsed_hours / 24.0).floor();
-    let mut alt_day = day as u32;
-    if parts >= 19440.0
-        || (2.0 == day % 7.0 && parts >= 9924.0 && !is_leap_year(year))
-        || (1.0 == day % 7.0 && parts >= 16789.0 && is_leap_year(previous_year as u32))
+    let elapsed_hours = 5
+        + 12 * elapsed_months
+        + 793 * (elapsed_months / 1080)
+        + (elapsed_parts / 1080);
+
+    let parts = (elapsed_parts % 1080) + 1080 * (elapsed_hours % 24);
+    let day = 1 + 29 * elapsed_months + (elapsed_hours / 24);
+    let mut alt_day = day;
+
+    if parts >= 19440
+        || (2 == day % 7 && parts >= 9924 && !is_leap_year(year))
+        || (1 == day % 7 && parts >= 16789 && is_leap_year(previous_year))
     {
         alt_day += 1;
     };
 
-    let result = if alt_day % 7 == 0 || alt_day % 7 == 3 || alt_day % 7 == 5 {
-        alt_day + 1
-    } else {
-        alt_day
-    };
-    ELAPSED_DAYS_CACHE.write().unwrap().insert(year, result);
-    result
+    if [0, 3, 5].contains(&(alt_day % 7)) {
+        alt_day += 1
+    }
+
+    // Writing to cache
+    ELAPSED_DAYS_CACHE.write().unwrap().insert(year, alt_day);
+    alt_day
 }
 
 fn new_year(year: u32) -> i32 {

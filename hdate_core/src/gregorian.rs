@@ -35,9 +35,9 @@ pub fn is_leap_year(year: i32) -> bool {
 ///
 /// # Panics
 ///
-/// This function panics if `month` is not between 1 and 12
+/// This function panics if `month` is not between 1 and 12 || year % 400 == 0
 pub fn days_in_month(month: u32, year: i32) -> u32 {
-    assert!((1..=12).contains(&month));
+    assert!((1..=12).contains(&month), "Invalid month, {} is not in range 1..=12", month);
     if is_leap_year(year) {
         LEAP_LENGTHS[month as usize]
     } else {
@@ -87,6 +87,7 @@ fn year_from_fixed(abs: i32) -> i32 {
     let n4 = quotient(d2, 1461);
     let d3 = reminder(d2, 1461);
     let n1 = quotient(d3, 365);
+    
     let year = 400 * n400 + 100 * n100 + 4 * n4 + n1;
     if n100 != 4 && n1 != 4 {
         year + 1
@@ -97,8 +98,9 @@ fn year_from_fixed(abs: i32) -> i32 {
 
 // Panics if the given Gregorian date is not valid.
 fn to_fixed(year: i32, month: u32, day: u32) -> i32 {
-    assert!((1..=12).contains(&month));
-    assert!(day >= 1 && day <= days_in_month(month, year));
+    assert!((1..=12).contains(&month), "Invalid month, {} is not in range 1..=12", month);
+    assert!(day >= 1 && day <= days_in_month(month, year), "Invalid day, {} is not valid", day);
+    
     let month = month as i32;
     let day = day as i32;
     let previous_year = year - 1;
