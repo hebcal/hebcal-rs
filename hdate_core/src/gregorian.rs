@@ -5,12 +5,12 @@ const LEAP_LENGTHS: [u32; 13] = [0, 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 
 
 #[inline]
 fn quotient(x: i32, y: i32) -> i32 {
-    (x as f32 / y as f32).floor() as i32
+    x.div_euclid(y)
 }
 
 #[inline]
 fn reminder(x: i32, y: i32) -> i32 {
-    x - y * (x as f32 / y as f32).floor() as i32
+    x.rem_euclid(y)
 }
 
 /// # Parameters
