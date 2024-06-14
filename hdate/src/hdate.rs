@@ -4,7 +4,7 @@ use std::ops::{Add, Sub};
 
 use chrono::{Local, NaiveDate};
 use hdate_core::gregorian::gregorian_to_absolute;
-use hdate_core::hebrew::{self, HebrewDate, HebrewDateErrors};
+use hdate_core::hebrew::{self, HebrewDate};
 
 use crate::HebrewMonth;
 
@@ -29,10 +29,7 @@ impl Hdate {
     pub fn new() -> Self {
         // The `expect` function will panic if the conversion fails, which can never happen
         // because `Local::now()` should never be before the creation of time.
-        Local::now()
-            .date_naive()
-            .try_into()
-            .expect("How that now it's before the creation of time?")
+        Self::from (Local::now().date_naive())
     }
 
     /// Creates a new `Hdate` from the given year, month, and day.
@@ -130,7 +127,7 @@ impl Add<i32> for Hdate {
     fn add(self, rhs: i32) -> Self::Output {
         let rd = self.rd + rhs;
 
-        let naive_hdate = HebrewDate::try_from_absolute(rd).unwrap();
+        let naive_hdate = HebrewDate::try_from_absolute(rd);
         Hdate {
             year: naive_hdate.year,
             month: naive_hdate.month,
@@ -175,18 +172,33 @@ impl PartialOrd for Hdate {
     }
 }
 
-impl TryFrom<NaiveDate> for Hdate {
-    type Error = HebrewDateErrors;
+// *** Try from requires an error result, best to implements a better method of result handling.
+// impl TryFrom<NaiveDate> for Hdate {
+//     type Error = HebrewDateErrors;
 
-    fn try_from(value: NaiveDate) -> Result<Self, Self::Error> {
+//     fn try_from(value: NaiveDate) -> Result<Self, Self::Error> {
+//         let rd = gregorian_to_absolute(value);
+//         let naive_hdate = HebrewDate::try_from_absolute(rd);
+//         Ok(Self {
+//             year: naive_hdate.year,
+//             month: naive_hdate.month,
+//             day: naive_hdate.day,
+//             rd,
+//         })
+//     }
+// }
+
+// *** Added this as conversion method which panics!()
+impl From<NaiveDate> for Hdate {
+    fn from(value: NaiveDate) -> Self {
         let rd = gregorian_to_absolute(value);
-        let naive_hdate = HebrewDate::try_from_absolute(rd)?;
-        Ok(Self {
+        let naive_hdate = HebrewDate::try_from_absolute(rd);
+        Self {
             year: naive_hdate.year,
             month: naive_hdate.month,
             day: naive_hdate.day,
             rd,
-        })
+        }
     }
 }
 

@@ -1,16 +1,13 @@
 use std::{collections::HashMap, fmt::Display, sync::RwLock};
 
-use once_cell::sync::Lazy;
+use lazy_static::lazy_static;
 
 const EPOCH: i32 = -1373428;
 
 const AVG_HEBREW_YEAR_DAYS: f64 = 365.24682220597794;
 
-#[derive(Debug, PartialEq)]
-pub enum HebrewDateErrors {
-    BeforeEpochError(String),
-    AdarIIInNotLeapYear,
-    BadMonthArgument,
+lazy_static! {
+    static ref ELAPSED_DAYS_CACHE: RwLock<HashMap<u32, u32>> = RwLock::new(HashMap::new());
 }
 
 /// A Hebrew date, consisting of a year, month, and day.
@@ -84,13 +81,8 @@ impl HebrewDate {
     ///
     /// let date = HebrewDate::try_from_absolute(733359).unwrap();
     /// assert_eq!(date, HebrewDate::new(5769, HebrewMonth::Cheshvan, 15));
-    pub fn try_from_absolute(absolute: i32) -> Result<Self, HebrewDateErrors> {
-        if absolute < EPOCH {
-            return Err(HebrewDateErrors::BeforeEpochError(format!(
-                "{} is before creation of time",
-                absolute
-            )));
-        };
+    pub fn try_from_absolute(absolute: i32) -> Self {
+        assert!(absolute < EPOCH, "{} is before creation of time", absolute);
 
         let mut year = ((absolute as f64 - EPOCH as f64).floor() / AVG_HEBREW_YEAR_DAYS) as u32;
         while new_year(year) <= absolute {
@@ -109,11 +101,11 @@ impl HebrewDate {
         }
 
         let day = 1 + absolute - hebrew_to_absolute(year, month.into(), 1);
-        Ok(Self {
+        Self {
             year,
             month: month.into(),
             day: day.try_into().unwrap(),
-        })
+        }
     }
 }
 
@@ -198,23 +190,15 @@ impl HebrewMonth {
     ///
     /// let month = HebrewMonth::try_from_ym(HebrewMonth::AdarI as u8, 5763).unwrap();
     /// assert_eq!(month, HebrewMonth::AdarI);
-    pub fn try_from_ym(month: u8, year: u32) -> Result<HebrewMonth, HebrewDateErrors> {
-        if !(1..=14).contains(&month) {
-            return Err(HebrewDateErrors::BadMonthArgument);
-        }
-
-        if is_leap_year(year) {
-            if month == 14 {
-                Ok(HebrewMonth::Nisan)
-            } else {
-                Ok(HebrewMonth::from(month))
-            }
-        } else if month == 14 {
-            Err(HebrewDateErrors::BadMonthArgument)
-        } else if month == 13 {
-            Ok(HebrewMonth::Nisan)
-        } else {
-            Ok(HebrewMonth::from(month))
+    pub fn try_from_ym(month: u8, year: u32) -> HebrewMonth {
+        // ??? Why not use assert, should be consistent
+        assert!((1..=14).contains(&month), "Month must fall fall in range 0..=14, you provided {}", month);
+        
+        match (month, is_leap_year(year)) {
+            (14, true) => HebrewMonth::Nisan,
+            (14, false) => panic!("{} is an invalid month because of leap year", month),
+            (13, false) => HebrewMonth::Nisan,
+            _ => HebrewMonth::from(month),
         }
     }
 }
@@ -233,9 +217,10 @@ pub fn is_leap_year(year: u32) -> bool {
 }
 
 fn hebrew_to_absolute(year: u32, month: HebrewMonth, day: u8) -> i32 {
-    assert!(year >= 1);
+    assert!(year > 0, "Year cannot be 0");
 
     let mut temp_absolute = day as u32;
+    
     if month < HebrewMonth::Tishrei {
         for i in HebrewMonth::Tishrei as u8..=months_in_year(year) {
             temp_absolute += days_in_month(i.into(), year) as u32;
@@ -248,6 +233,7 @@ fn hebrew_to_absolute(year: u32, month: HebrewMonth, day: u8) -> i32 {
             temp_absolute += days_in_month(i.into(), year) as u32;
         }
     };
+
     EPOCH + elapsed_days(year) as i32 + temp_absolute as i32 - 1
 }
 
@@ -303,8 +289,6 @@ fn days_in_year(year: u32) -> u32 {
     elapsed_days(year + 1) - elapsed_days(year)
 }
 
-static ELAPSED_DAYS_CACHE: Lazy<RwLock<HashMap<u32, u32>>> =
-    Lazy::new(|| RwLock::new(HashMap::new()));
 /// # Arguments
 ///
 /// * `year` - The Hebrew year for which to calculate the number of days
@@ -316,40 +300,43 @@ pub fn elapsed_days(year: u32) -> u32 {
     if let Some(days) = ELAPSED_DAYS_CACHE.read().unwrap().get(&year) {
         return *days;
     }
-    let previous_year = year as f32 - 1.0;
+    
+    let previous_year = year - 1;
 
-    let overall_months = 235.0 * (previous_year / 19.0).floor();
-    let regular_months = 12.0 * (previous_year % 19.0);
-    let leap_months = (((previous_year % 19.0) * 7.0 + 1.0) / 19.0).floor();
-
+    // Calculating months 
+    let overall_months = 235 * (previous_year / 19);
+    let regular_months = 12 * (previous_year % 19);
+    let leap_months = ((previous_year % 19) * 7 + 1) / 19;
     let elapsed_months = overall_months
     // Regular months in this cycle
      + regular_months
      + leap_months;
 
-    let elapsed_parts = 204.0 + 793.0 * (elapsed_months % 1080.0);
-    let elapsed_hours = 5.0
-        + 12.0 * elapsed_months
-        + 793.0 * (elapsed_months / 1080.0).floor()
-        + (elapsed_parts / 1080.0).floor();
+    let elapsed_parts = 204 + 793 * (elapsed_months % 1080);
 
-    let parts = (elapsed_parts % 1080.0) + 1080.0 * (elapsed_hours % 24.0);
-    let day = 1.0 + 29.0 * elapsed_months + (elapsed_hours / 24.0).floor();
-    let mut alt_day = day as u32;
-    if parts >= 19440.0
-        || (2.0 == day % 7.0 && parts >= 9924.0 && !is_leap_year(year))
-        || (1.0 == day % 7.0 && parts >= 16789.0 && is_leap_year(previous_year as u32))
+    let elapsed_hours = 5
+        + 12 * elapsed_months
+        + 793 * (elapsed_months / 1080)
+        + (elapsed_parts / 1080);
+
+    let parts = (elapsed_parts % 1080) + 1080 * (elapsed_hours % 24);
+    let day = 1 + 29 * elapsed_months + (elapsed_hours / 24);
+    let mut alt_day = day;
+
+    if parts >= 19440
+        || (2 == day % 7 && parts >= 9924 && !is_leap_year(year))
+        || (1 == day % 7 && parts >= 16789 && is_leap_year(previous_year))
     {
         alt_day += 1;
     };
 
-    let result = if alt_day % 7 == 0 || alt_day % 7 == 3 || alt_day % 7 == 5 {
-        alt_day + 1
-    } else {
-        alt_day
-    };
-    ELAPSED_DAYS_CACHE.write().unwrap().insert(year, result);
-    result
+    if [0, 3, 5].contains(&(alt_day % 7)) {
+        alt_day += 1
+    }
+
+    // Writing to cache
+    ELAPSED_DAYS_CACHE.write().unwrap().insert(year, alt_day);
+    alt_day
 }
 
 fn new_year(year: u32) -> i32 {
@@ -511,122 +498,120 @@ mod tests {
     #[test]
     fn test_try_from_absolute() {
         assert_eq!(
-            HebrewDate::try_from_absolute(733359).unwrap(),
+            HebrewDate::try_from_absolute(733359),
             HebrewDate::new(5769, HebrewMonth::Cheshvan, 15)
         );
         assert_eq!(
-            HebrewDate::try_from_absolute(711262).unwrap(),
+            HebrewDate::try_from_absolute(711262),
             HebrewDate::new(5708, HebrewMonth::Iyyar, 6)
         );
         assert_eq!(
-            HebrewDate::try_from_absolute(249).unwrap(),
+            HebrewDate::try_from_absolute(249),
             HebrewDate::new(3762, HebrewMonth::Tishrei, 1)
         );
         assert_eq!(
-            HebrewDate::try_from_absolute(1).unwrap(),
+            HebrewDate::try_from_absolute(1),
             HebrewDate::new(3761, HebrewMonth::Tevet, 18)
         );
         assert_eq!(
-            HebrewDate::try_from_absolute(0).unwrap(),
+            HebrewDate::try_from_absolute(0),
             HebrewDate::new(3761, HebrewMonth::Tevet, 17)
         );
         assert_eq!(
-            HebrewDate::try_from_absolute(-16).unwrap(),
+            HebrewDate::try_from_absolute(-16),
             HebrewDate::new(3761, HebrewMonth::Tevet, 1)
         );
         assert_eq!(
-            HebrewDate::try_from_absolute(736685).unwrap(),
+            HebrewDate::try_from_absolute(736685),
             HebrewDate::new(5778, HebrewMonth::Tevet, 4)
         );
         assert_eq!(
-            HebrewDate::try_from_absolute(737485).unwrap(),
+            HebrewDate::try_from_absolute(737485),
             HebrewDate::new(5780, HebrewMonth::AdarI, 5)
         );
         assert_eq!(
-            HebrewDate::try_from_absolute(737885).unwrap(),
+            HebrewDate::try_from_absolute(737885),
             HebrewDate::new(5781, HebrewMonth::Nisan, 23)
         );
         assert_eq!(
-            HebrewDate::try_from_absolute(738285).unwrap(),
+            HebrewDate::try_from_absolute(738285),
             HebrewDate::new(5782, HebrewMonth::Iyyar, 9)
         );
         assert_eq!(
-            HebrewDate::try_from_absolute(732038).unwrap(),
+            HebrewDate::try_from_absolute(732038),
             HebrewDate::new(5765, HebrewMonth::AdarII, 22)
         );
         assert_eq!(
-            HebrewDate::try_from_absolute(32141).unwrap(),
+            HebrewDate::try_from_absolute(32141),
             HebrewDate::new(3849, HebrewMonth::Shvat, 1)
         );
         assert_eq!(
-            HebrewDate::try_from_absolute(32142).unwrap(),
+            HebrewDate::try_from_absolute(32142),
             HebrewDate::new(3849, HebrewMonth::Shvat, 2)
         );
     }
 
     #[test]
+    #[should_panic]
     fn test_try_from_absolute_error() {
-        assert_eq!(
-            HebrewDate::try_from_absolute(-1373429),
-            Err(HebrewDateErrors::BeforeEpochError(
-                "-1373429 is before creation of time".to_string()
-            ))
-        );
+        HebrewDate::try_from_absolute(-1373429);
     }
 
     #[test]
     fn test_try_from_ym() {
         assert_eq!(
-            HebrewMonth::try_from_ym(HebrewMonth::AdarI as u8, 5763).unwrap(),
+            HebrewMonth::try_from_ym(HebrewMonth::AdarI as u8, 5763),
             HebrewMonth::AdarI
         );
         assert_eq!(
-            HebrewMonth::try_from_ym(HebrewMonth::AdarII as u8, 5763).unwrap(),
+            HebrewMonth::try_from_ym(HebrewMonth::AdarII as u8, 5763),
             HebrewMonth::AdarII
         );
         assert_eq!(
-            HebrewMonth::try_from_ym(14, 5763).unwrap(),
+            HebrewMonth::try_from_ym(14, 5763),
             HebrewMonth::Nisan
         );
         assert_eq!(
-            HebrewMonth::try_from_ym(HebrewMonth::AdarI as u8, 5764).unwrap(),
+            HebrewMonth::try_from_ym(HebrewMonth::AdarI as u8, 5764),
             HebrewMonth::AdarI
         );
         assert_eq!(
-            HebrewMonth::try_from_ym(HebrewMonth::AdarII as u8, 5764).unwrap(),
+            HebrewMonth::try_from_ym(HebrewMonth::AdarII as u8, 5764),
             HebrewMonth::Nisan
         );
         assert_eq!(
-            HebrewMonth::try_from_ym(HebrewMonth::Tamuz as u8, 5780).unwrap(),
+            HebrewMonth::try_from_ym(HebrewMonth::Tamuz as u8, 5780),
             HebrewMonth::Tamuz
         );
         assert_eq!(
-            HebrewMonth::try_from_ym(HebrewMonth::Nisan as u8, 5763).unwrap(),
+            HebrewMonth::try_from_ym(HebrewMonth::Nisan as u8, 5763),
             HebrewMonth::Nisan
         );
         assert_eq!(
-            HebrewMonth::try_from_ym(HebrewMonth::Elul as u8, 5763).unwrap(),
+            HebrewMonth::try_from_ym(HebrewMonth::Elul as u8, 5763),
             HebrewMonth::Elul
         );
         assert_eq!(
-            HebrewMonth::try_from_ym(HebrewMonth::Tishrei as u8, 5763).unwrap(),
+            HebrewMonth::try_from_ym(HebrewMonth::Tishrei as u8, 5763),
             HebrewMonth::Tishrei
         );
     }
 
     #[test]
-    fn test_try_from_ym_error() {
-        assert_eq!(
-            HebrewMonth::try_from_ym(0, 5780),
-            Err(HebrewDateErrors::BadMonthArgument)
-        );
-        assert_eq!(
-            HebrewMonth::try_from_ym(20, 5780),
-            Err(HebrewDateErrors::BadMonthArgument)
-        );
-        assert_eq!(
-            HebrewMonth::try_from_ym(14, 5764),
-            Err(HebrewDateErrors::BadMonthArgument)
-        );
+    #[should_panic]
+    fn test_try_from_ym_error1() {
+        HebrewMonth::try_from_ym(0, 5780);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_try_from_ym_error2() {
+        HebrewMonth::try_from_ym(20, 5780);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_try_from_ym_error3() {
+        HebrewMonth::try_from_ym(14, 5764);
     }
 }

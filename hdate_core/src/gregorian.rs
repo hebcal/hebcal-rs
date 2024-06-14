@@ -5,12 +5,12 @@ const LEAP_LENGTHS: [u32; 13] = [0, 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 
 
 #[inline]
 fn quotient(x: i32, y: i32) -> i32 {
-    (x as f32 / y as f32).floor() as i32
+    x.div_euclid(y)
 }
 
 #[inline]
 fn reminder(x: i32, y: i32) -> i32 {
-    x - y * (x as f32 / y as f32).floor() as i32
+    x.rem_euclid(y)
 }
 
 /// # Parameters
@@ -35,9 +35,9 @@ pub fn is_leap_year(year: i32) -> bool {
 ///
 /// # Panics
 ///
-/// This function panics if `month` is not between 1 and 12
+/// This function panics if `month` is not between 1 and 12 || year % 400 == 0
 pub fn days_in_month(month: u32, year: i32) -> u32 {
-    assert!((1..=12).contains(&month));
+    assert!((1..=12).contains(&month), "Invalid month, {} is not in range 1..=12", month);
     if is_leap_year(year) {
         LEAP_LENGTHS[month as usize]
     } else {
@@ -62,6 +62,7 @@ pub fn gregorian_to_absolute(date: NaiveDate) -> i32 {
 pub fn absolute_to_gregorian(absolute: i32) -> Option<NaiveDate> {
     let year = year_from_fixed(absolute);
     let prior_days = absolute - to_fixed(year, 1, 1);
+    
     let correction = if absolute < to_fixed(year, 3, 1) {
         0
     } else if is_leap_year(year) {
@@ -87,6 +88,7 @@ fn year_from_fixed(abs: i32) -> i32 {
     let n4 = quotient(d2, 1461);
     let d3 = reminder(d2, 1461);
     let n1 = quotient(d3, 365);
+    
     let year = 400 * n400 + 100 * n100 + 4 * n4 + n1;
     if n100 != 4 && n1 != 4 {
         year + 1
@@ -97,8 +99,9 @@ fn year_from_fixed(abs: i32) -> i32 {
 
 // Panics if the given Gregorian date is not valid.
 fn to_fixed(year: i32, month: u32, day: u32) -> i32 {
-    assert!((1..=12).contains(&month));
-    assert!(day >= 1 && day <= days_in_month(month, year));
+    assert!((1..=12).contains(&month), "Invalid month, {} is not in range 1..=12", month);
+    assert!(day >= 1 && day <= days_in_month(month, year), "Invalid day, {} is not valid", day);
+    
     let month = month as i32;
     let day = day as i32;
     let previous_year = year - 1;
