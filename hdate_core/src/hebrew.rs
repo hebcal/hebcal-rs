@@ -10,13 +10,6 @@ lazy_static! {
     static ref ELAPSED_DAYS_CACHE: RwLock<HashMap<u32, u32>> = RwLock::new(HashMap::new());
 }
 
-#[derive(Debug, PartialEq)]
-pub enum HebrewDateErrors {
-    BeforeEpochError(String),
-    AdarIIInNotLeapYear,
-    BadMonthArgument,
-}
-
 /// A Hebrew date, consisting of a year, month, and day.
 ///
 /// # Examples
@@ -88,13 +81,8 @@ impl HebrewDate {
     ///
     /// let date = HebrewDate::try_from_absolute(733359).unwrap();
     /// assert_eq!(date, HebrewDate::new(5769, HebrewMonth::Cheshvan, 15));
-    pub fn try_from_absolute(absolute: i32) -> Result<Self, HebrewDateErrors> {
-        if absolute < EPOCH {
-            return Err(HebrewDateErrors::BeforeEpochError(format!(
-                "{} is before creation of time",
-                absolute
-            )));
-        };
+    pub fn try_from_absolute(absolute: i32) -> Self {
+        assert!(absolute < EPOCH, "{} is before creation of time", absolute);
 
         let mut year = ((absolute as f64 - EPOCH as f64).floor() / AVG_HEBREW_YEAR_DAYS) as u32;
         while new_year(year) <= absolute {
@@ -113,11 +101,11 @@ impl HebrewDate {
         }
 
         let day = 1 + absolute - hebrew_to_absolute(year, month.into(), 1);
-        Ok(Self {
+        Self {
             year,
             month: month.into(),
             day: day.try_into().unwrap(),
-        })
+        }
     }
 }
 
@@ -202,17 +190,15 @@ impl HebrewMonth {
     ///
     /// let month = HebrewMonth::try_from_ym(HebrewMonth::AdarI as u8, 5763).unwrap();
     /// assert_eq!(month, HebrewMonth::AdarI);
-    pub fn try_from_ym(month: u8, year: u32) -> Result<HebrewMonth, HebrewDateErrors> {
+    pub fn try_from_ym(month: u8, year: u32) -> HebrewMonth {
         // ??? Why not use assert, should be consistent
-        if !(1..=14).contains(&month) {
-            return Err(HebrewDateErrors::BadMonthArgument);
-        }
+        assert!((1..=14).contains(&month), "Month must fall fall in range 0..=14, you provided {}", month);
         
         match (month, is_leap_year(year)) {
-            (14, true) => Ok(HebrewMonth::Nisan),
-            (14, false) => Err(HebrewDateErrors::BadMonthArgument),
-            (13, false) => Ok(HebrewMonth::Nisan),
-            _ => Ok(HebrewMonth::from(month)),
+            (14, true) => HebrewMonth::Nisan,
+            (14, false) => panic!("{} is an invalid month because of leap year", month),
+            (13, false) => HebrewMonth::Nisan,
+            _ => HebrewMonth::from(month),
         }
     }
 }
@@ -512,122 +498,120 @@ mod tests {
     #[test]
     fn test_try_from_absolute() {
         assert_eq!(
-            HebrewDate::try_from_absolute(733359).unwrap(),
+            HebrewDate::try_from_absolute(733359),
             HebrewDate::new(5769, HebrewMonth::Cheshvan, 15)
         );
         assert_eq!(
-            HebrewDate::try_from_absolute(711262).unwrap(),
+            HebrewDate::try_from_absolute(711262),
             HebrewDate::new(5708, HebrewMonth::Iyyar, 6)
         );
         assert_eq!(
-            HebrewDate::try_from_absolute(249).unwrap(),
+            HebrewDate::try_from_absolute(249),
             HebrewDate::new(3762, HebrewMonth::Tishrei, 1)
         );
         assert_eq!(
-            HebrewDate::try_from_absolute(1).unwrap(),
+            HebrewDate::try_from_absolute(1),
             HebrewDate::new(3761, HebrewMonth::Tevet, 18)
         );
         assert_eq!(
-            HebrewDate::try_from_absolute(0).unwrap(),
+            HebrewDate::try_from_absolute(0),
             HebrewDate::new(3761, HebrewMonth::Tevet, 17)
         );
         assert_eq!(
-            HebrewDate::try_from_absolute(-16).unwrap(),
+            HebrewDate::try_from_absolute(-16),
             HebrewDate::new(3761, HebrewMonth::Tevet, 1)
         );
         assert_eq!(
-            HebrewDate::try_from_absolute(736685).unwrap(),
+            HebrewDate::try_from_absolute(736685),
             HebrewDate::new(5778, HebrewMonth::Tevet, 4)
         );
         assert_eq!(
-            HebrewDate::try_from_absolute(737485).unwrap(),
+            HebrewDate::try_from_absolute(737485),
             HebrewDate::new(5780, HebrewMonth::AdarI, 5)
         );
         assert_eq!(
-            HebrewDate::try_from_absolute(737885).unwrap(),
+            HebrewDate::try_from_absolute(737885),
             HebrewDate::new(5781, HebrewMonth::Nisan, 23)
         );
         assert_eq!(
-            HebrewDate::try_from_absolute(738285).unwrap(),
+            HebrewDate::try_from_absolute(738285),
             HebrewDate::new(5782, HebrewMonth::Iyyar, 9)
         );
         assert_eq!(
-            HebrewDate::try_from_absolute(732038).unwrap(),
+            HebrewDate::try_from_absolute(732038),
             HebrewDate::new(5765, HebrewMonth::AdarII, 22)
         );
         assert_eq!(
-            HebrewDate::try_from_absolute(32141).unwrap(),
+            HebrewDate::try_from_absolute(32141),
             HebrewDate::new(3849, HebrewMonth::Shvat, 1)
         );
         assert_eq!(
-            HebrewDate::try_from_absolute(32142).unwrap(),
+            HebrewDate::try_from_absolute(32142),
             HebrewDate::new(3849, HebrewMonth::Shvat, 2)
         );
     }
 
     #[test]
+    #[should_panic]
     fn test_try_from_absolute_error() {
-        assert_eq!(
-            HebrewDate::try_from_absolute(-1373429),
-            Err(HebrewDateErrors::BeforeEpochError(
-                "-1373429 is before creation of time".to_string()
-            ))
-        );
+        HebrewDate::try_from_absolute(-1373429);
     }
 
     #[test]
     fn test_try_from_ym() {
         assert_eq!(
-            HebrewMonth::try_from_ym(HebrewMonth::AdarI as u8, 5763).unwrap(),
+            HebrewMonth::try_from_ym(HebrewMonth::AdarI as u8, 5763),
             HebrewMonth::AdarI
         );
         assert_eq!(
-            HebrewMonth::try_from_ym(HebrewMonth::AdarII as u8, 5763).unwrap(),
+            HebrewMonth::try_from_ym(HebrewMonth::AdarII as u8, 5763),
             HebrewMonth::AdarII
         );
         assert_eq!(
-            HebrewMonth::try_from_ym(14, 5763).unwrap(),
+            HebrewMonth::try_from_ym(14, 5763),
             HebrewMonth::Nisan
         );
         assert_eq!(
-            HebrewMonth::try_from_ym(HebrewMonth::AdarI as u8, 5764).unwrap(),
+            HebrewMonth::try_from_ym(HebrewMonth::AdarI as u8, 5764),
             HebrewMonth::AdarI
         );
         assert_eq!(
-            HebrewMonth::try_from_ym(HebrewMonth::AdarII as u8, 5764).unwrap(),
+            HebrewMonth::try_from_ym(HebrewMonth::AdarII as u8, 5764),
             HebrewMonth::Nisan
         );
         assert_eq!(
-            HebrewMonth::try_from_ym(HebrewMonth::Tamuz as u8, 5780).unwrap(),
+            HebrewMonth::try_from_ym(HebrewMonth::Tamuz as u8, 5780),
             HebrewMonth::Tamuz
         );
         assert_eq!(
-            HebrewMonth::try_from_ym(HebrewMonth::Nisan as u8, 5763).unwrap(),
+            HebrewMonth::try_from_ym(HebrewMonth::Nisan as u8, 5763),
             HebrewMonth::Nisan
         );
         assert_eq!(
-            HebrewMonth::try_from_ym(HebrewMonth::Elul as u8, 5763).unwrap(),
+            HebrewMonth::try_from_ym(HebrewMonth::Elul as u8, 5763),
             HebrewMonth::Elul
         );
         assert_eq!(
-            HebrewMonth::try_from_ym(HebrewMonth::Tishrei as u8, 5763).unwrap(),
+            HebrewMonth::try_from_ym(HebrewMonth::Tishrei as u8, 5763),
             HebrewMonth::Tishrei
         );
     }
 
     #[test]
-    fn test_try_from_ym_error() {
-        assert_eq!(
-            HebrewMonth::try_from_ym(0, 5780),
-            Err(HebrewDateErrors::BadMonthArgument)
-        );
-        assert_eq!(
-            HebrewMonth::try_from_ym(20, 5780),
-            Err(HebrewDateErrors::BadMonthArgument)
-        );
-        assert_eq!(
-            HebrewMonth::try_from_ym(14, 5764),
-            Err(HebrewDateErrors::BadMonthArgument)
-        );
+    #[should_panic]
+    fn test_try_from_ym_error1() {
+        HebrewMonth::try_from_ym(0, 5780);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_try_from_ym_error2() {
+        HebrewMonth::try_from_ym(20, 5780);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_try_from_ym_error3() {
+        HebrewMonth::try_from_ym(14, 5764);
     }
 }
